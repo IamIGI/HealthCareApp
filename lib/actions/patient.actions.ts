@@ -2,8 +2,18 @@
 'use server';
 
 import { ID, Query } from 'node-appwrite';
-import { users } from '../appwrite.config';
+import {
+  APPWRITE_DATABASE_ID,
+  APPWRITE_NEXT_PUBLIC_BUCKET_ID,
+  APPWRITE_NEXT_PUBLIC_ENDPOINT,
+  APPWRITE_PATIENT_COLLECTION_ID,
+  APPWRITE_PROJECT_ID,
+  databases,
+  storage,
+  users,
+} from '../appwrite.config';
 import { parseStringify } from '../utils';
+import { InputFile } from 'node-appwrite/file';
 
 // https://appwrite.io/docs/references/1.5.x/server-nodejs/users#create
 export const createUser = async (user: CreateUserParams) => {
@@ -33,6 +43,45 @@ export const getUser = async (userId: string) => {
   try {
     const user = await users.get(userId);
     return parseStringify(user);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const registerPatient = async ({
+  identificationDocument,
+  ...patient
+}: RegisterUserParams) => {
+  try {
+    //To upload images to appWrite, you need to save it in storage instead of in database
+    let file;
+
+    if (identificationDocument) {
+      const inputFile = InputFile.fromBuffer(
+        identificationDocument?.get('blobFile') as Blob,
+        identificationDocument?.get('fileName') as string
+      );
+
+      //Adding file to storage
+      file = await storage.createFile(
+        APPWRITE_NEXT_PUBLIC_BUCKET_ID!,
+        ID.unique(),
+        inputFile
+      );
+    }
+
+    const newPatient = await databases.createDocument(
+      APPWRITE_DATABASE_ID!,
+      APPWRITE_PATIENT_COLLECTION_ID!,
+      ID.unique(),
+      {
+        identificationDocumentId: file?.$id || null,
+        identificationDocumentUrl: `${APPWRITE_NEXT_PUBLIC_ENDPOINT}/storage/buckets/${APPWRITE_NEXT_PUBLIC_BUCKET_ID}/files/${file?.$id}/view?project=${APPWRITE_PROJECT_ID}`,
+        ...patient,
+      }
+    );
+
+    return parseStringify(newPatient);
   } catch (error) {
     console.log(error);
   }
