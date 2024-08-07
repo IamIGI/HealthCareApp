@@ -4,8 +4,8 @@
 import { ID, Query } from 'node-appwrite';
 import {
   APPWRITE_DATABASE_ID,
-  APPWRITE_NEXT_PUBLIC_BUCKET_ID,
-  APPWRITE_NEXT_PUBLIC_ENDPOINT,
+  NEXT_PUBLIC_APPWRITE_BUCKET_ID,
+  NEXT_PUBLIC_APPWRITE_ENDPOINT,
   APPWRITE_PATIENT_COLLECTION_ID,
   APPWRITE_PROJECT_ID,
   databases,
@@ -48,6 +48,20 @@ export const getUser = async (userId: string) => {
   }
 };
 
+export const getPatient = async (userId: string) => {
+  try {
+    const patient = await databases.listDocuments(
+      APPWRITE_DATABASE_ID!,
+      APPWRITE_PATIENT_COLLECTION_ID!,
+      [Query.equal('userId', userId)]
+    );
+
+    return parseStringify(patient.documents[0]);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export const registerPatient = async ({
   identificationDocument,
   ...patient
@@ -64,7 +78,7 @@ export const registerPatient = async ({
 
       //Adding file to storage
       file = await storage.createFile(
-        APPWRITE_NEXT_PUBLIC_BUCKET_ID!,
+        NEXT_PUBLIC_APPWRITE_BUCKET_ID!,
         ID.unique(),
         inputFile
       );
@@ -76,7 +90,7 @@ export const registerPatient = async ({
       ID.unique(),
       {
         identificationDocumentId: file?.$id || null,
-        identificationDocumentUrl: `${APPWRITE_NEXT_PUBLIC_ENDPOINT}/storage/buckets/${APPWRITE_NEXT_PUBLIC_BUCKET_ID}/files/${file?.$id}/view?project=${APPWRITE_PROJECT_ID}`,
+        identificationDocumentUrl: `${NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${NEXT_PUBLIC_APPWRITE_BUCKET_ID}/files/${file?.$id}/view?project=${APPWRITE_PROJECT_ID}`,
         ...patient,
       }
     );
